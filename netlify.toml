@@ -1,0 +1,6 @@
+[build]
+  command = "node scripts/build_frontend.mjs"
+  publish = "frontend-dist"
+
+[build.environment]
+  NODE_VERSION = "22"

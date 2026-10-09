@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+.vercel/
+projects/
+*.log
+data/
+frontend-dist/
+*.sqlite3*
+.venv/
+validation-output/
