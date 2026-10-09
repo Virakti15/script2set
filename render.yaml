@@ -2,14 +2,10 @@ services:
   - type: web
     name: script2set-api
     runtime: python
-    plan: starter
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: python app.py
     healthCheckPath: /health
-    disk:
-      name: script2set-data
-      mountPath: /var/data/script2set
-      sizeGB: 1
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.10
@@ -18,7 +14,7 @@ services:
       - key: HOST
         value: 0.0.0.0
       - key: DATA_DIR
-        value: /var/data/script2set
+        value: /tmp/script2set
       - key: SECRET_KEY
         generateValue: true
       - key: APP_ACCESS_PASSWORD
