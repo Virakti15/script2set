@@ -1,5 +1,11 @@
 # Script2Set manual deployment
 
+## Existing free-tier deployment (10 October 2026)
+
+The current `render.yaml` targets the existing free `script2set-api` service, uses Gunicorn (declared in `requirements.txt` on Linux), and stores server files in `/tmp/script2set`. Do not create a duplicate Blueprint/service. No paid disk is configured. Server-saved projects and uploaded images are temporary on this tier and can disappear on a restart or redeploy: download project JSON and keep original image files as backups. Browser storage remains local to that browser. For durable server storage, the paid disk instructions below are an optional upgrade requiring the account owner's approval.
+
+For the existing service, keep the build command `pip install -r requirements.txt` and start command `gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 120 app:app`. Use `DATA_DIR=/tmp/script2set` until a persistent disk is explicitly approved. Keep `IMAGE_PROVIDER=none`. The remaining environment, Netlify build, CORS and post-deployment checks below still apply.
+
 This setup keeps the static browser application on Netlify and runs the private Flask API on Render. Text AI keys stay on Render. Projects and optional uploaded reference images are stored in SQLite on a mounted persistent disk. No image-generation API or image key is required. Nothing has been deployed by this handoff.
 
 ## 1. Put the project on GitHub
