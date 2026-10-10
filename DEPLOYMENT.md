@@ -6,7 +6,7 @@ The current `render.yaml` targets the existing free `script2set-api` service, us
 
 For the existing service, keep the build command `pip install -r requirements.txt` and start command `gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 120 app:app`. Use `DATA_DIR=/tmp/script2set` until a persistent disk is explicitly approved. Keep `IMAGE_PROVIDER=none`. The remaining environment, Netlify build, CORS and post-deployment checks below still apply.
 
-This setup keeps the static browser application on Netlify and runs the private Flask API on Render. Text AI keys stay on Render. Projects and optional uploaded reference images are stored in SQLite on a mounted persistent disk. No image-generation API or image key is required. Nothing has been deployed by this handoff.
+This setup keeps the static browser application on Netlify and runs the private Flask API on Render. Text AI keys stay on Render. Projects and optional uploaded reference images use SQLite in DATA_DIR. On the current free service this storage is temporary. No image-generation API or image key is required. The backend is deployed at https://script2set-api.onrender.com; frontend deployment and live authenticated workflow verification are separate checks.
 
 ## 1. Put the project on GitHub
 
@@ -25,24 +25,13 @@ Confirm that `.env`, `data/`, `frontend-dist/`, SQLite files, and provider keys 
 
 ## 2. Deploy the Flask backend on Render
 
-1. In Render, choose **New > Blueprint** and connect the GitHub repository.
-2. The simplest path is to push this `script2set` directory as the repository root. For a larger repository, select the Blueprint file path and add the service's `rootDir` in `render.yaml` to point to the directory containing `app.py`.
-3. Review the `script2set-api` service. The Blueprint uses Python 3.12, installs `requirements.txt`, runs `python app.py`, checks `/health`, and mounts a 1 GB disk at `/var/data/script2set`.
-4. Keep a single Render instance while using the SQLite disk. A mounted Render disk attaches to one service instance.
-5. Enter the secret environment values described below and create the service.
+1. Open the existing **script2set-api** service linked to `Virakti15/script2set`, branch `main`. Do not create another service or Blueprint.
+2. Keep the free instance type and repository root directory. Install with `pip install -r requirements.txt`.
+3. Start with `gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 120 app:app` and use `/health` as the health check.
+4. Set the backend environment variables below. Keep `DATA_DIR=/tmp/script2set` for the free service.
+5. Deploy the latest tested GitHub commit and confirm the deploy status and public health response.
 
-The included Waitress server reads Render's `PORT`, binds to `0.0.0.0`, and does not depend on a Windows path. `DATA_DIR=/var/data/script2set` keeps saved projects and image bytes on the mounted disk. Render files outside that path are temporary.
-
-You can also create a Web Service manually with:
-
-- Runtime: `Python 3`
-- Root directory: the directory containing `app.py`
-- Build command: `pip install -r requirements.txt`
-- Start command: `python app.py`
-- Health check: `/health`
-- Persistent disk mount: `/var/data/script2set`
-- Disk size: 1 GB or more
-
+The repository Blueprint describes this free configuration. No disk is provisioned. An optional persistent disk requires a paid service and explicit owner approval; if approved later, mount it at `/var/data/script2set` and change DATA_DIR accordingly. Keep one instance while using SQLite.
 ## 3. Configure backend environment variables
 
 Set these in Render. Never add their real values to Netlify or GitHub.
@@ -51,7 +40,7 @@ Set these in Render. Never add their real values to Netlify or GitHub.
 | --- | --- | --- |
 | `APP_ENV` | Yes | `production` |
 | `HOST` | Yes | `0.0.0.0` |
-| `DATA_DIR` | Yes | `/var/data/script2set` |
+| `DATA_DIR` | Yes | `/tmp/script2set` on the current free service (temporary) |
 | `SECRET_KEY` | Yes | A long random value; the Blueprint can generate it |
 | `APP_ACCESS_PASSWORD` | Yes | A private workspace password |
 | `FRONTEND_ORIGINS` | Yes | Exact Netlify origin, such as `https://your-site.netlify.app`; comma-separate additional exact HTTPS origins |
@@ -107,8 +96,10 @@ The offline regression suite needs no API credentials: `python -m pytest -q`. In
 
 ## 6. Backups and updates
 
-Download project JSON copies for production backups. Render snapshots the persistent disk, but the single-workspace SQLite store is intended for one service instance. For multi-user access or horizontal scaling, move projects and image assets to managed database/object storage before adding instances.
+Download project JSON copies and retain original uploaded images as backups. The current free service has no persistent disk: server-saved data can disappear on restart, redeploy, or instance replacement. The single-workspace SQLite store is intended for one service instance. For multi-user access or horizontal scaling, move projects and image assets to managed database/object storage before adding instances.
 
 For updates, push the tested commit to GitHub. Render and Netlify can rebuild from that branch. Keep the same `SECRET_KEY`; changing it invalidates active login and plan-approval signatures, so users will need to sign in and approve plans again.
 
 Configuration references: [Netlify file-based builds](https://docs.netlify.com/build/configure-builds/file-based-configuration/), [Render Blueprint specification](https://render.com/docs/blueprint-spec), and [Render persistent disks](https://render.com/docs/disks).
+
+
