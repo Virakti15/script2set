@@ -9,10 +9,9 @@ from .schema import UserError
 
 def provider_name():
     return os.getenv('AI_PROVIDER','demo').lower()
-
-def post_json(url, payload, key='', timeout=None):
+def post_json(url, payload, key='', timeout=None, headers=None):
     req = Request(url, data=json.dumps(payload).encode(), headers={
-        'Content-Type':'application/json', **({'Authorization':'Bearer '+key} if key else {})})
+        'Content-Type':'application/json', **({'Authorization':'Bearer '+key} if key else {}), **(headers or {})})
     return request_json(req, timeout)
 
 
@@ -68,8 +67,20 @@ def complete(system, payload):
             raw = result['choices'][0]['message']['content']
         except (KeyError,IndexError,TypeError):
             raise UserError('The AI returned no usable content. Please regenerate.',502) from None
+    elif name=='google':
+        key, model = os.getenv('GOOGLE_API_KEY'),os.getenv('GOOGLE_MODEL','gemini-2.0-flash')
+        if not key:
+            raise UserError('Cloud AI is not configured. Set GOOGLE_API_KEY on the server.',503)
+        base=os.getenv('GOOGLE_BASE_URL','https://generativelanguage.googleapis.com').rstrip('/')
+        result=post_json(base+'/v1beta/models/'+model+':generateContent?key='+key,
+                         {'systemInstruction':{'parts':[{'text':messages[0]['content']}]},
+                          'contents':[{'role':'user','parts':[{'text':messages[1]['content']}]}],
+                          'generationConfig':{'responseMimeType':'application/json'}})
+        try: raw=result['candidates'][0]['content']['parts'][0]['text']
+        except (KeyError,IndexError,TypeError):
+            raise UserError('The AI returned no usable content. Please regenerate.',502) from None
     else:
-        raise UserError('Unsupported AI provider. Choose demo, ollama, or openai in the server configuration.',503)
+        raise UserError('Unsupported AI provider. Choose demo, ollama, openai, or google in the server configuration.',503)
     try:
         raw = raw.strip()
         if raw.startswith('```'):
